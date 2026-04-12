@@ -15,6 +15,8 @@ public class ThreadRelay {
      */
     public static void main(String[] args) {
         // TODO code application logic here
+        Staffetta s = new Staffetta();
+        s.setVisible(true);
     }
     
 }
