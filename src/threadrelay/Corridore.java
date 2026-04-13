@@ -13,17 +13,17 @@ public class Corridore implements Runnable {
     private final int id;
     private final int speed;
     private final Corridore prossimoCorridore;
-
+    private boolean paused = false;
+    private boolean stopped = false;
     private boolean canStart = false;
     private boolean finished = false;
     private int count = 0;
 
-    // Interfaccia per notificare la UI — la implementa Staffetta
     public interface Ascoltatore {
 
-        void onAggiorna(int id, int count);
+        void Aggiorna(int id, int count);
 
-        void onFine(int id);
+        void Fine(int id);
     }
 
     private Ascoltatore ascoltatore;
@@ -47,6 +47,21 @@ public class Corridore implements Runnable {
         return finished;
     }
 
+    public synchronized void pause() {
+        paused = true;
+    }
+
+    public synchronized void resume() {
+        paused = false;
+        notifyAll();
+    }
+
+    public synchronized void stop() {
+        stopped = true;
+        paused = false;
+        notifyAll();
+    }
+
     @Override
     public void run() {
 
@@ -66,7 +81,20 @@ public class Corridore implements Runnable {
         for (count = 0; count <= 99; count++) {
 
             if (ascoltatore != null) {
-                ascoltatore.onAggiorna(id, count);
+                ascoltatore.Aggiorna(id, count);
+            }
+            synchronized (this) {
+                while (paused) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
+                if (stopped) {
+                    return;
+                }
             }
 
             if (count == 90 && prossimoCorridore != null) {
@@ -90,7 +118,7 @@ public class Corridore implements Runnable {
         }
 
         if (ascoltatore != null) {
-            ascoltatore.onFine(id);
+            ascoltatore.Fine(id);
         }
     }
 }

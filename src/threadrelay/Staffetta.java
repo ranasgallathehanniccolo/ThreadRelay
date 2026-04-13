@@ -48,7 +48,12 @@ public class Staffetta extends javax.swing.JFrame {
         cmbVelocita.setModel(new javax.swing.DefaultComboBoxModel<>(Velocita.values()));
     }
 
+    private Corridore c1, c2, c3, c4;
+    
     private void avvia() {
+        btnPausa.setEnabled(true);
+        btnRiprendi.setEnabled(false);
+        btnInterrompi.setEnabled(false);
         Velocita vel = (Velocita) cmbVelocita.getSelectedItem();
         int delay = vel.getDelayMs();
 
@@ -63,15 +68,14 @@ public class Staffetta extends javax.swing.JFrame {
         cmbVelocita.setEnabled(false);
 
         // Crea i corridori in ordine inverso (catena di sblocco)
-        Corridore c4 = new Corridore(4, delay, null);
-        Corridore c3 = new Corridore(3, delay, c4);
-        Corridore c2 = new Corridore(2, delay, c3);
-        Corridore c1 = new Corridore(1, delay, c2);
+        c4 = new Corridore(4, delay, null);
+        c3 = new Corridore(3, delay, c4);
+        c2 = new Corridore(2, delay, c3);
+        c1 = new Corridore(1, delay, c2);
 
-        // Ascoltatore: aggiorna la UI sul EDT
         Corridore.Ascoltatore asc = new Corridore.Ascoltatore() {
             @Override
-            public void onAggiorna(int id, int count) {
+            public void Aggiorna(int id, int count) {
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     int idx = id - 1;
                     barre[idx].setValue(count);
@@ -81,7 +85,7 @@ public class Staffetta extends javax.swing.JFrame {
             }
 
             @Override
-            public void onFine(int id) {
+            public void Fine(int id) {
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     int idx = id - 1;
                     barre[idx].setString("Fine");
@@ -103,7 +107,6 @@ public class Staffetta extends javax.swing.JFrame {
 
         c1.allowStart();
 
-        // Thread di guardia: aspetta la fine di c4 e riabilita i controlli
         new Thread(() -> {
             synchronized (c4) {
                 while (!c4.isFinished()) {
@@ -115,10 +118,61 @@ public class Staffetta extends javax.swing.JFrame {
                 }
             }
             javax.swing.SwingUtilities.invokeLater(() -> {
-                btnAvvia.setEnabled(true);
+                btnPausa.setEnabled(false);
+                btnRiprendi.setEnabled(false);
                 cmbVelocita.setEnabled(true);
             });
         }).start();
+    }
+    
+    private void pausa() {
+        if (c1 != null) {
+            c1.pause();
+        }
+        if (c2 != null) {
+            c2.pause();
+        }
+        if (c3 != null) {
+            c3.pause();
+        }
+        if (c4 != null) {
+            c4.pause();
+        }
+        btnPausa.setEnabled(false);
+        btnRiprendi.setEnabled(true);
+        btnInterrompi.setEnabled(true);
+    }
+
+    private void riprendi() {
+        if (c1 != null) {
+            c1.resume();
+        }
+        if (c2 != null) {
+            c2.resume();
+        }
+        if (c3 != null) {
+            c3.resume();
+        }
+        if (c4 != null) {
+            c4.resume();
+        }
+        btnPausa.setEnabled(true);
+        btnRiprendi.setEnabled(false);
+    }
+    
+    private void interrompi(){
+        if (c1 != null){
+            c1.stop();
+        }
+        if (c2 != null){
+            c2.stop();
+        }
+        if (c3 != null){
+            c3.stop();
+        }
+        if (c4 != null){
+            c4.stop();
+        }
     }
     /**
      * This method is called from within the constructor to initialize the form.
@@ -147,6 +201,9 @@ public class Staffetta extends javax.swing.JFrame {
         lblPercentuale4 = new javax.swing.JLabel();
         btnAvvia = new javax.swing.JButton();
         cmbVelocita = new javax.swing.JComboBox<>();
+        btnPausa = new javax.swing.JButton();
+        btnRiprendi = new javax.swing.JButton();
+        btnInterrompi = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -265,9 +322,21 @@ public class Staffetta extends javax.swing.JFrame {
 
         btnAvvia.setText("Avvia");
         btnAvvia.addActionListener(this::btnAvviaActionPerformed);
-        getContentPane().add(btnAvvia, new org.netbeans.lib.awtextra.AbsoluteConstraints(240, 250, -1, -1));
+        getContentPane().add(btnAvvia, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 250, -1, -1));
 
-        getContentPane().add(cmbVelocita, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 250, -1, -1));
+        getContentPane().add(cmbVelocita, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 250, -1, -1));
+
+        btnPausa.setText("Pausa");
+        btnPausa.addActionListener(this::btnPausaActionPerformed);
+        getContentPane().add(btnPausa, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 250, -1, -1));
+
+        btnRiprendi.setText("Riprendi");
+        btnRiprendi.addActionListener(this::btnRiprendiActionPerformed);
+        getContentPane().add(btnRiprendi, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 250, -1, -1));
+
+        btnInterrompi.setText("Interrompi");
+        btnInterrompi.addActionListener(this::btnInterrompiActionPerformed);
+        getContentPane().add(btnInterrompi, new org.netbeans.lib.awtextra.AbsoluteConstraints(470, 250, -1, -1));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -276,6 +345,21 @@ public class Staffetta extends javax.swing.JFrame {
         // TODO add your handling code here:
         avvia();
     }//GEN-LAST:event_btnAvviaActionPerformed
+
+    private void btnPausaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPausaActionPerformed
+        // TODO add your handling code here:
+        pausa();
+    }//GEN-LAST:event_btnPausaActionPerformed
+
+    private void btnRiprendiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRiprendiActionPerformed
+        // TODO add your handling code here:
+        riprendi();
+    }//GEN-LAST:event_btnRiprendiActionPerformed
+
+    private void btnInterrompiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnInterrompiActionPerformed
+        // TODO add your handling code here:
+        interrompi();
+    }//GEN-LAST:event_btnInterrompiActionPerformed
 
     /**
      * @param args the command line arguments
@@ -304,6 +388,9 @@ public class Staffetta extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnAvvia;
+    private javax.swing.JButton btnInterrompi;
+    private javax.swing.JButton btnPausa;
+    private javax.swing.JButton btnRiprendi;
     private javax.swing.JComboBox<Velocita> cmbVelocita;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel3;
