@@ -3,42 +3,42 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 package threadrelay;
-
+ 
 import javax.swing.*;
-import java.awt.Image;
-
+ 
 /**
+ * ConcreteObserver del Pattern Observer.
  *
- * @author Windows
+ * Staffetta ora implementa CorridoreObserver: si registra come observer
+ * su ogni Corridore e riceve le notifiche direttamente tramite
+ * onAggiornamento() e onFine(), senza più usare la classe anonima Ascoltatore.
+ *
+ * Questo riduce l'accoppiamento: Corridore non conosce Staffetta,
+ * conosce solo l'interfaccia CorridoreObserver.
  */
-public class Staffetta extends javax.swing.JFrame {
-
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Staffetta.class.getName());
-
+public class Staffetta extends javax.swing.JFrame implements CorridoreObserver {
+ 
+    private static final java.util.logging.Logger logger =
+            java.util.logging.Logger.getLogger(Staffetta.class.getName());
+ 
     private javax.swing.JProgressBar[] barre;
-    private javax.swing.JLabel[] labelContatore;
-    private javax.swing.JLabel[] lblImage;
-
-    /**
-     * Creates new form Staffetta
-     */
+    private javax.swing.JLabel[]       labelContatore;
+ 
     public Staffetta() {
         initComponents();
-
-        // Mappa i componenti in array ordinati per posizione verticale
+ 
         barre = new javax.swing.JProgressBar[]{
             jProgressBar1, jProgressBar2, jProgressBar3, jProgressBar4
         };
         labelContatore = new javax.swing.JLabel[]{
             lblPercentuale1, lblPercentuale2, lblPercentuale3, lblPercentuale4
         };
-
-        // Configura progress bar e label iniziali
+ 
         jLabel1.setText("Corridore 1");
         jLabel3.setText("Corridore 2");
         jLabel5.setText("Corridore 3");
         jLabel9.setText("Corridore 4");
-
+ 
         for (int i = 0; i < 4; i++) {
             barre[i].setMinimum(0);
             barre[i].setMaximum(99);
@@ -47,75 +47,87 @@ public class Staffetta extends javax.swing.JFrame {
             barre[i].setString("");
             labelContatore[i].setText("—");
         }
-
-        cmbVelocita.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"Veloce", "Normale", "Lento"}));
+ 
+        cmbVelocita.setModel(new javax.swing.DefaultComboBoxModel<>(
+                new String[]{"Veloce", "Normale", "Lento"}));
     }
+ 
     private Corridore c1, c2, c3, c4;
-
+ 
+    // ════════════ Implementazione di CorridoreObserver ════════════
+ 
+    /**
+     * Chiamato dal thread del Corridore ad ogni passo.
+     * IMPORTANTE: siamo su un thread secondario → usiamo invokeLater per Swing.
+     */
+    @Override
+    public void onAggiornamento(int id, int count) {
+        SwingUtilities.invokeLater(() -> {
+            int idx = id - 1;
+            barre[idx].setValue(count);
+            barre[idx].setString(String.valueOf(count));
+            labelContatore[idx].setText(String.valueOf(count));
+        });
+    }
+ 
+    /**
+     * Chiamato dal thread del Corridore quando termina la sua frazione.
+     */
+    @Override
+    public void onFine(int id) {
+        SwingUtilities.invokeLater(() -> {
+            int idx = id - 1;
+            barre[idx].setString("Fine");
+            labelContatore[idx].setText("Fine");
+        });
+    }
+ 
+    // ════════════ Logica avvia/pausa/riprendi/interrompi ════════════
+ 
     private void avvia() {
         btnPausa.setEnabled(true);
         btnRiprendi.setEnabled(false);
         btnInterrompi.setEnabled(false);
+ 
         int delay = switch ((String) cmbVelocita.getSelectedItem()) {
-            case "Veloce" ->
-                20;
-            case "Normale" ->
-                60;
-            default ->
-                120;
+            case "Veloce"  -> 20;
+            case "Normale" -> 60;
+            default        -> 120;
         };
-
+ 
         // Reset UI
         for (int i = 0; i < 4; i++) {
             barre[i].setValue(0);
             barre[i].setString("");
             labelContatore[i].setText("—");
         }
-
+ 
         btnAvvia.setEnabled(false);
         btnInterrompi.setEnabled(false);
         cmbVelocita.setEnabled(false);
-
+ 
         // Crea i corridori in ordine inverso (catena di sblocco)
         c4 = new Corridore(4, delay, null);
         c3 = new Corridore(3, delay, c4);
         c2 = new Corridore(2, delay, c3);
         c1 = new Corridore(1, delay, c2);
-
-        Corridore.Ascoltatore asc = new Corridore.Ascoltatore() {
-            @Override
-            public void Aggiorna(int id, int count) {
-                javax.swing.SwingUtilities.invokeLater(() -> {
-                    int idx = id - 1;
-                    barre[idx].setValue(count);
-                    barre[idx].setString(String.valueOf(count));
-                    labelContatore[idx].setText(String.valueOf(count));
-                });
-            }
-
-            @Override
-            public void Fine(int id) {
-                javax.swing.SwingUtilities.invokeLater(() -> {
-                    int idx = id - 1;
-                    barre[idx].setString("Fine");
-                    labelContatore[idx].setText("Fine");
-                });
-            }
-        };
-
-        c1.setAscoltatore(asc);
-        c2.setAscoltatore(asc);
-        c3.setAscoltatore(asc);
-        c4.setAscoltatore(asc);
-
+ 
+        // Staffetta (this) si registra come Observer su ogni Corridore
+        // Nessuna classe anonima: siamo noi stessi l'observer!
+        c1.addObserver(this);
+        c2.addObserver(this);
+        c3.addObserver(this);
+        c4.addObserver(this);
+ 
         // Avvia i thread
-        new Thread(c1, "Corridore 1").start();
-        new Thread(c2, "Corridore 2").start();
-        new Thread(c3, "Corridore 3").start();
-        new Thread(c4, "Corridore 4").start();
-
+        new Thread(c1, "Corridore-1").start();
+        new Thread(c2, "Corridore-2").start();
+        new Thread(c3, "Corridore-3").start();
+        new Thread(c4, "Corridore-4").start();
+ 
         c1.allowStart();
-
+ 
+        // Thread sentinella: aspetta che c4 finisca, poi riabilita l'UI
         new Thread(() -> {
             synchronized (c4) {
                 while (!c4.isFinished()) {
@@ -126,63 +138,40 @@ public class Staffetta extends javax.swing.JFrame {
                     }
                 }
             }
-            javax.swing.SwingUtilities.invokeLater(() -> {
+            SwingUtilities.invokeLater(() -> {
+                btnAvvia.setEnabled(true);
                 btnPausa.setEnabled(false);
                 btnRiprendi.setEnabled(false);
                 cmbVelocita.setEnabled(true);
             });
         }).start();
     }
-
+ 
     private void pausa() {
-        if (c1 != null) {
-            c1.pause();
-        }
-        if (c2 != null) {
-            c2.pause();
-        }
-        if (c3 != null) {
-            c3.pause();
-        }
-        if (c4 != null) {
-            c4.pause();
-        }
+        if (c1 != null) c1.pause();
+        if (c2 != null) c2.pause();
+        if (c3 != null) c3.pause();
+        if (c4 != null) c4.pause();
         btnPausa.setEnabled(false);
         btnRiprendi.setEnabled(true);
         btnInterrompi.setEnabled(true);
     }
-
+ 
     private void riprendi() {
-        if (c1 != null) {
-            c1.resume();
-        }
-        if (c2 != null) {
-            c2.resume();
-        }
-        if (c3 != null) {
-            c3.resume();
-        }
-        if (c4 != null) {
-            c4.resume();
-        }
+        if (c1 != null) c1.resume();
+        if (c2 != null) c2.resume();
+        if (c3 != null) c3.resume();
+        if (c4 != null) c4.resume();
         btnPausa.setEnabled(true);
         btnRiprendi.setEnabled(false);
         btnInterrompi.setEnabled(false);
     }
-
+ 
     private void interrompi() {
-        if (c1 != null) {
-            c1.stop();
-        }
-        if (c2 != null) {
-            c2.stop();
-        }
-        if (c3 != null) {
-            c3.stop();
-        }
-        if (c4 != null) {
-            c4.stop();
-        }
+        if (c1 != null) c1.stop();
+        if (c2 != null) c2.stop();
+        if (c3 != null) c3.stop();
+        if (c4 != null) c4.stop();
         for (int i = 0; i < 4; i++) {
             barre[i].setValue(0);
             barre[i].setString("");
