@@ -4,16 +4,20 @@
  */
 package threadrelay;
 
+import javax.swing.*;
+import java.awt.Image;
+
 /**
  *
  * @author Windows
  */
 public class Staffetta extends javax.swing.JFrame {
-    
+
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Staffetta.class.getName());
-    
+
     private javax.swing.JProgressBar[] barre;
     private javax.swing.JLabel[] labelContatore;
+    private javax.swing.JLabel[] lblImage;
 
     /**
      * Creates new form Staffetta
@@ -44,18 +48,22 @@ public class Staffetta extends javax.swing.JFrame {
             labelContatore[i].setText("—");
         }
 
-        // Popola la combo con le velocità
-        cmbVelocita.setModel(new javax.swing.DefaultComboBoxModel<>(Velocita.values()));
+        cmbVelocita.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"Veloce", "Normale", "Lento"}));
     }
-
     private Corridore c1, c2, c3, c4;
-    
+
     private void avvia() {
         btnPausa.setEnabled(true);
         btnRiprendi.setEnabled(false);
         btnInterrompi.setEnabled(false);
-        Velocita vel = (Velocita) cmbVelocita.getSelectedItem();
-        int delay = vel.getDelayMs();
+        int delay = switch ((String) cmbVelocita.getSelectedItem()) {
+            case "Veloce" ->
+                20;
+            case "Normale" ->
+                60;
+            default ->
+                120;
+        };
 
         // Reset UI
         for (int i = 0; i < 4; i++) {
@@ -65,6 +73,7 @@ public class Staffetta extends javax.swing.JFrame {
         }
 
         btnAvvia.setEnabled(false);
+        btnInterrompi.setEnabled(false);
         cmbVelocita.setEnabled(false);
 
         // Crea i corridori in ordine inverso (catena di sblocco)
@@ -124,7 +133,7 @@ public class Staffetta extends javax.swing.JFrame {
             });
         }).start();
     }
-    
+
     private void pausa() {
         if (c1 != null) {
             c1.pause();
@@ -158,22 +167,34 @@ public class Staffetta extends javax.swing.JFrame {
         }
         btnPausa.setEnabled(true);
         btnRiprendi.setEnabled(false);
+        btnInterrompi.setEnabled(false);
     }
-    
-    private void interrompi(){
-        if (c1 != null){
+
+    private void interrompi() {
+        if (c1 != null) {
             c1.stop();
         }
-        if (c2 != null){
+        if (c2 != null) {
             c2.stop();
         }
-        if (c3 != null){
+        if (c3 != null) {
             c3.stop();
         }
-        if (c4 != null){
+        if (c4 != null) {
             c4.stop();
         }
+        for (int i = 0; i < 4; i++) {
+            barre[i].setValue(0);
+            barre[i].setString("");
+            labelContatore[i].setText("—");
+        }
+        btnAvvia.setEnabled(true);
+        btnPausa.setEnabled(false);
+        btnRiprendi.setEnabled(false);
+        btnInterrompi.setEnabled(false);
+        cmbVelocita.setEnabled(true);
     }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -214,8 +235,6 @@ public class Staffetta extends javax.swing.JFrame {
 
         jLabel1.setText("Runner1");
 
-        lblPercentuale1.setText("jLabel2");
-
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -240,8 +259,6 @@ public class Staffetta extends javax.swing.JFrame {
         getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 10, 120, 50));
 
         jLabel3.setText("Runner2");
-
-        lblPercentuale2.setText("jLabel2");
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -268,8 +285,6 @@ public class Staffetta extends javax.swing.JFrame {
 
         jLabel5.setText("Runner3");
 
-        lblPercentuale3.setText("jLabel2");
-
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
@@ -294,8 +309,6 @@ public class Staffetta extends javax.swing.JFrame {
         getContentPane().add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 130, 120, 50));
 
         jLabel9.setText("Runner4");
-
-        lblPercentuale4.setText("jLabel2");
 
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
@@ -391,7 +404,7 @@ public class Staffetta extends javax.swing.JFrame {
     private javax.swing.JButton btnInterrompi;
     private javax.swing.JButton btnPausa;
     private javax.swing.JButton btnRiprendi;
-    private javax.swing.JComboBox<Velocita> cmbVelocita;
+    private javax.swing.JComboBox<String> cmbVelocita;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel5;
